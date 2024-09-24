@@ -1,0 +1,17 @@
+{
+  "hosting": {
+    "site": "deliveryapp-55f8c",
+    "public": "dist/deliver",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}

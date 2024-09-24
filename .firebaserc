@@ -1,0 +1,16 @@
+{
+  "projects": {
+    "yochivoy-app": "deliveryapp-54574"
+  },
+  "targets": {
+    "deliveryapp-54574": {
+      "hosting": {
+        "delivery_target_app": [
+          "delivery_app"
+        ]
+      }
+    }
+  },
+  "etags": {},
+  "dataconnectEmulatorConfig": {}
+}

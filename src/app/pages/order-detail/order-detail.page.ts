@@ -51,6 +51,9 @@ export class OrderDetailPage implements OnInit {
   waypoints: any;
   showMap: any = false;
   typeAddress: any = 1;
+
+  geocoder: any;
+
   constructor(
     private route: ActivatedRoute,
     private api: ApiService,
@@ -64,6 +67,28 @@ export class OrderDetailPage implements OnInit {
     this.bounds = new google.maps.LatLngBounds();
   }
 
+  
+
+  // Método para cargar el mapa una vez obtenidas las coordenadas
+  loadMap() {
+    let mapEle: HTMLElement = document.getElementById('map');
+    let myLatLng = { lat: this.latC, lng: this.lngC };
+
+    this.map = new google.maps.Map(mapEle, {
+      center: myLatLng,
+      zoom: 12
+    });
+
+    new google.maps.Marker({
+      position: myLatLng,
+      map: this.map,
+      title: 'Ubicación Geocodificada'
+    });
+
+    google.maps.event.addListenerOnce(this.map, 'idle', () => {
+      mapEle.classList.add('show-map');
+    });
+  }
 
 
   ngOnInit() {
@@ -74,6 +99,8 @@ export class OrderDetailPage implements OnInit {
       this.getOrder();
     });
   }
+
+  
 
   @HostListener('copy', ['$event']) blockCopy(e: KeyboardEvent) {
     e.preventDefault();
@@ -109,12 +136,13 @@ export class OrderDetailPage implements OnInit {
         this.payment = data.paid;
         this.myname = data.dId.fullname;
         this.token = data.uid.fcm_token;
+        
+        console.log('Dirección:', this.deliveryAddress);
+        this.geocodeAddress(this.deliveryAddress);
+        console.log('Restaurante Latitude:', this.latV);
+        console.log('Restaurante Longitude:', this.lngV);
 
-        console.log('Destination Latitude:', this.latV);
-        console.log('Destination Longitude:', this.lngV);
-
-        console.log('Latitud de la dirección:', this.latC);
-        console.log('Longitud de la dirección:', this.lngC);
+        
         
         this.api.getProfile(data.vid.uid).then((dataU) => {
           console.log('driver status cahcnage----->', dataU);
@@ -136,6 +164,27 @@ export class OrderDetailPage implements OnInit {
       this.util.errorToast(this.util.translate('Something went wrong'));
     });
   }
+
+  geocodeAddress(deliveryAddress: String) {
+    const geocoder = new google.maps.Geocoder();
+    
+    geocoder.geocode({ address: deliveryAddress }, (results, status) => {
+      if (status === 'OK') {
+        // Guardar las coordenadas
+        this.latC = results[0].geometry.location.lat();
+        this.lngC = results[0].geometry.location.lng();
+
+        // Imprimir las coordenadas en la consola
+        console.log('Latitud:', this.latC);
+        console.log('Longitud:', this.lngC);
+      } else {
+        console.error('Geocoding failed: ' + status);
+      }
+    });
+  
+  }
+
+
   changeStatus(value) {
     this.util.show();
     this.api.updateOrderStatus(this.id, value).then((data) => {
@@ -272,22 +321,24 @@ export class OrderDetailPage implements OnInit {
     });
   }
 
-  open_map_vanue(lat, lng,type) {
+  open_map_vanue(lat, lng, type) {
     this.typeAddress =type
     this.showMap = true;
+    
     this.geolocation
       .getCurrentPosition()
       .then(resp => {
         let latitude = resp.coords.latitude;
         let longitude = resp.coords.longitude;
 
-        console.log('Current Latitude:', latitude);
-        console.log('Current Longitude:', longitude);
+        console.log('Ubicacion Real Latitude:', latitude);
+        console.log('Ubicacion Real Longitude:', longitude);
        
         let mapEle: HTMLElement = document.getElementById('map');
         let panelEle: HTMLElement = document.getElementById('panel');
         let myLatLng = { lat: latitude, lng: longitude };
-        let myLatLng2 = {lat: lat, lng: lng};
+        let myLatLng2 = {lat: this.latC, lng: this.latC};
+        let myLatLng3 = {lat: this.latV, lng: this.lngV};
         // create map
 
         this.waypoints = [
@@ -296,9 +347,15 @@ export class OrderDetailPage implements OnInit {
             stopover: true,
           },
           {
-            location: new google.maps.LatLng(lat, lng),
+            location: new google.maps.LatLng(this.latV, this.lngV),
+            stopover: true,
+            
+          },
+          {
+            location: new google.maps.LatLng(this.latC, this.lngC),
             stopover: true,
           }
+          
         ];
 
 
@@ -311,10 +368,7 @@ export class OrderDetailPage implements OnInit {
 
 
         google.maps.event.addListenerOnce(this.map, 'idle', () => {
-          let marker = new google.maps.Marker({
-            position: myLatLng,
-            map: this.map
-          });
+         
           mapEle.classList.add('show-map');
           //this.calculateRoute();
          
@@ -325,11 +379,27 @@ export class OrderDetailPage implements OnInit {
           
           this.map.fitBounds(this.bounds);*/
 
-          console.log(this.latC+" "+this.lngC)
+          this.waypoints.forEach((waypoint, index) => {
+            
+          
+            new google.maps.Marker({
+              position: waypoint.location,
+              map: this.map,
+              // Marcador personalizado
+              label: {
+                text: (index + 1).toString(), // Número del waypoint
+                color: 'white', // Color del texto
+                fontSize: '16px', // Tamaño de la fuente
+              },
+            });
+          });
+
+          
+          
           this.directionsService.route({
             origin: new google.maps.LatLng(latitude, longitude),
-            destination: new google.maps.LatLng(this.latV, this.lngV),
-            
+            destination: new google.maps.LatLng(this.latC, this.lngC),
+            waypoints: this.waypoints,
 
 
             travelMode: google.maps.TravelMode.DRIVING,
